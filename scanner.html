@@ -2,47 +2,56 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Scanner</title>
+<title>Color Scanner</title>
 <style>
-body{ text-align:center; background:#111; color:#fff; font-family:Arial;}
-video{ width:90%; max-width:400px; border-radius:12px;}
+body{ text-align:center; background:#111; color:#fff;}
+video{ width:90%; max-width:400px;}
 #scan{ display:none;}
-#overlay{
- position:absolute;
- top:50%; left:50%;
- width:250px; height:250px;
- transform:translate(-50%,-50%);
- border:3px solid #00ffcc;
- border-radius:15px;
- pointer-events:none;
-}
 </style>
 </head>
 <body>
 
-<h2>Scan the Card</h2>
-
-<div style="position:relative; display:inline-block;">
+<h2>Scan Color Card</h2>
 <video id="video" autoplay playsinline></video>
-<div id="overlay"></div>
-</div>
-
 <canvas id="scan" width="300" height="300"></canvas>
 
 <h1 id="output">...</h1>
 
 <script>
 
-function binaryToText(binary){
-  let text="";
-  for(let i=0;i<binary.length;i+=8){
-    let byte=binary.slice(i,i+8);
-    let code=parseInt(byte,2);
-    if(!isNaN(code) && code>0){
-      text+=String.fromCharCode(code);
-    }
+function closestColor(r,g,b){
+
+ const palette=[
+  {bits:"00", r:255,g:0,b:0},
+  {bits:"01", r:0,g:255,b:0},
+  {bits:"10", r:0,g:0,b:255},
+  {bits:"11", r:255,g:255,b:0}
+ ];
+
+ let minDist=999999;
+ let best="00";
+
+ for(let c of palette){
+  let dist=(r-c.r)**2+(g-c.g)**2+(b-c.b)**2;
+  if(dist<minDist){
+   minDist=dist;
+   best=c.bits;
   }
-  return text;
+ }
+
+ return best;
+}
+
+function binaryToText(binary){
+ let text="";
+ for(let i=0;i<binary.length;i+=8){
+  let byte=binary.slice(i,i+8);
+  let code=parseInt(byte,2);
+  if(!isNaN(code)&&code>0){
+   text+=String.fromCharCode(code);
+  }
+ }
+ return text;
 }
 
 const video=document.getElementById("video");
@@ -54,85 +63,34 @@ navigator.mediaDevices.getUserMedia({
  scan();
 });
 
+function scan(){
 
-let lastResults = [];
-const REQUIRED_STABLE = 5;
+ const canvas=document.getElementById("scan");
+ const ctx=canvas.getContext("2d");
 
-function adaptiveThreshold(ctx) {
-  const img = ctx.getImageData(0, 0, 300, 300).data;
-  let total = 0;
-  let count = 0;
+ ctx.drawImage(video,0,0,300,300);
 
-  for (let i = 0; i < img.length; i += 4) {
-    total += (img[i] + img[i+1] + img[i+2]) / 3;
-    count++;
+ const size=16;
+ const cell=300/size;
+
+ let binary="";
+
+ for(let y=0;y<size;y++){
+  for(let x=0;x<size;x++){
+
+   let px=Math.floor((x+0.5)*cell);
+   let py=Math.floor((y+0.5)*cell);
+
+   let data=ctx.getImageData(px,py,1,1).data;
+
+   binary+=closestColor(data[0],data[1],data[2]);
   }
+ }
 
-  return total / count; // متوسط الإضاءة
+ document.getElementById("output").innerText=binaryToText(binary);
+
+ requestAnimationFrame(scan);
 }
-
-function sampleCell(ctx, px, py, size) {
-  let sum = 0;
-  let samples = 0;
-
-  for (let dx = -2; dx <= 2; dx++) {
-    for (let dy = -2; dy <= 2; dy++) {
-      let data = ctx.getImageData(px + dx, py + dy, 1, 1).data;
-      sum += (data[0] + data[1] + data[2]) / 3;
-      samples++;
-    }
-  }
-
-  return sum / samples;
-}
-
-function scan() {
-  const canvas = document.getElementById("scan");
-  const ctx = canvas.getContext("2d");
-
-  ctx.drawImage(video, 0, 0, 300, 300);
-
-  const size = 20;
-  const start = 60;
-  const area = 180;
-  const cell = area / size;
-
-  const threshold = adaptiveThreshold(ctx);
-
-  let binary = "";
-
-  for (let y = 2; y < size - 2; y++) {
-    for (let x = 2; x < size - 2; x++) {
-
-      let px = Math.floor(start + (x + 0.5) * cell);
-      let py = Math.floor(start + (y + 0.5) * cell);
-
-      let avg = sampleCell(ctx, px, py, cell);
-
-      binary += avg < threshold ? "1" : "0";
-    }
-  }
-
-  let result = binaryToText(binary);
-
-  if (result.length > 0) {
-    lastResults.push(result);
-
-    if (lastResults.length > REQUIRED_STABLE) {
-      lastResults.shift();
-    }
-
-    const stable = lastResults.every(r => r === result);
-
-    if (stable) {
-      document.getElementById("output").innerText = result;
-    }
-  }
-
-  requestAnimationFrame(scan);
-}
-
-
 
 </script>
 </body>

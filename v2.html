@@ -2,57 +2,61 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>Simple Pattern Scanner</title>
+<title>Pattern Demo</title>
 <style>
-body { text-align: center; font-family: Arial; }
-video, canvas { width: 300px; margin-top: 10px; }
+body { text-align:center; font-family: Arial; }
+canvas, video { width:300px; margin:10px; }
 </style>
 </head>
 <body>
 
-<h2>وجّه الكاميرا نحو الكارت</h2>
+<h2>الصورة المشفرة (محبة)</h2>
+<canvas id="pattern" width="256" height="256"></canvas>
 
+<h2>امسح الكارت بالكاميرا</h2>
 <video id="video" autoplay playsinline></video>
-<canvas id="canvas" width="300" height="300"></canvas>
+<canvas id="scan" width="256" height="256"></canvas>
 
 <h3 id="output"></h3>
 
 <script>
-const video = document.getElementById("video");
-const output = document.getElementById("output");
+// ====== النص ======
+const text = "محبة";
 
-// فتح الكاميرا
-navigator.mediaDevices.getUserMedia({
-  video: { facingMode: "environment" }
-})
-.then(stream => video.srcObject = stream);
-
-// قراءة الصورة
-function scan() {
-  const canvas = document.getElementById("canvas");
-  const ctx = canvas.getContext("2d");
-
-  ctx.drawImage(video, 0, 0, 300, 300);
-
-  const img = ctx.getImageData(0, 0, 300, 300).data;
-
+// ====== تحويل لنظام binary ======
+function textToBinary(text) {
   let binary = "";
-
-  // تحويل الصورة لـ binary
-  for (let i = 0; i < img.length; i += 4) {
-    let avg = (img[i] + img[i+1] + img[i+2]) / 3;
-    binary += avg < 128 ? "1" : "0";
+  for (let char of text) {
+    let code = char.charCodeAt(0);
+    binary += code.toString(2).padStart(16, "0");
   }
-
-  // تجربة فكها
-  let text = binaryToText(binary.slice(0, 2000));
-
-  output.innerText = text;
-
-  requestAnimationFrame(scan);
+  return binary;
 }
 
-// تحويل binary → نص
+// ====== رسم pattern ======
+function drawPattern(binary) {
+  const canvas = document.getElementById("pattern");
+  const ctx = canvas.getContext("2d");
+
+  const size = 16;
+  const cell = canvas.width / size;
+
+  let i = 0;
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+
+      let bit = binary[i] || "0";
+
+      ctx.fillStyle = bit === "1" ? "#000" : "#fff";
+      ctx.fillRect(x * cell, y * cell, cell, cell);
+
+      i++;
+    }
+  }
+}
+
+// ====== Binary → نص ======
 function binaryToText(binary) {
   let text = "";
 
@@ -68,7 +72,42 @@ function binaryToText(binary) {
   return text;
 }
 
+// ====== تشغيل الكاميرا ======
+const video = document.getElementById("video");
+
+navigator.mediaDevices.getUserMedia({
+  video: { facingMode: "environment" }
+})
+.then(stream => video.srcObject = stream);
+
+// ====== قراءة الصورة ======
+function scan() {
+  const canvas = document.getElementById("scan");
+  const ctx = canvas.getContext("2d");
+
+  ctx.drawImage(video, 0, 0, 256, 256);
+
+  const img = ctx.getImageData(0, 0, 256, 256).data;
+
+  let binary = "";
+
+  for (let i = 0; i < img.length; i += 4) {
+    let avg = (img[i] + img[i+1] + img[i+2]) / 3;
+    binary += avg < 128 ? "1" : "0";
+  }
+
+  let result = binaryToText(binary.slice(0, 256));
+
+  document.getElementById("output").innerText = result;
+
+  requestAnimationFrame(scan);
+}
+
+// ====== تشغيل ======
+const binary = textToBinary(text);
+drawPattern(binary);
 scan();
+
 </script>
 
 </body>

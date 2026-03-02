@@ -2,30 +2,68 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>Pattern كامل</title>
+<title>Scanner احترافي</title>
+
 <style>
-body { text-align:center; font-family: Arial; }
-canvas, video { width:300px; margin:10px; }
-button { padding:10px 20px; margin:10px; }
+body {
+  text-align:center;
+  font-family: Arial;
+  background:#111;
+  color:#fff;
+}
+
+/* الكاميرا */
+#video {
+  width: 90%;
+  max-width: 400px;
+  border-radius: 12px;
+}
+
+/* إطار التصويب */
+#overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 220px;
+  height: 220px;
+  transform: translate(-50%, -50%);
+  border: 3px solid #00ffcc;
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+/* نخفي الكانفاس */
+#scan {
+  display: none;
+}
+
+button {
+  padding:10px 20px;
+  margin:10px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
 </style>
 </head>
+
 <body>
 
-<h2>الصورة المشفرة (محبة)</h2>
-<canvas id="pattern" width="256" height="256"></canvas>
+<h2>📱 وجّه الكاميرا نحو الكود</h2>
 
-<h2>النتيجة:</h2>
-<h3 id="output"></h3>
+<div style="position:relative; display:inline-block;">
+  <video id="video" autoplay playsinline></video>
+  <div id="overlay"></div>
+</div>
 
-<button onclick="testFromPattern()">🧪 تجربة بدون كاميرا</button>
-<button onclick="startCamera()">📱 تشغيل الكاميرا</button>
-
-<br>
-
-<video id="video" autoplay playsinline></video>
 <canvas id="scan" width="256" height="256"></canvas>
 
+<h2>النتيجة:</h2>
+<h1 id="output">...</h1>
+
 <script>
+
 // ====== النص ======
 const text = "محبة";
 
@@ -37,29 +75,6 @@ function textToBinary(text) {
     binary += code.toString(2).padStart(16, "0");
   }
   return binary;
-}
-
-// ====== رسم pattern ======
-function drawPattern(binary) {
-  const canvas = document.getElementById("pattern");
-  const ctx = canvas.getContext("2d");
-
-  const size = 16;
-  const cell = canvas.width / size;
-
-  let i = 0;
-
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-
-      let bit = binary[i] || "0";
-
-      ctx.fillStyle = bit === "1" ? "#000" : "#fff";
-      ctx.fillRect(x * cell, y * cell, cell, cell);
-
-      i++;
-    }
-  }
 }
 
 // ====== Binary → نص ======
@@ -78,48 +93,18 @@ function binaryToText(binary) {
   return text;
 }
 
-// ====== اختبار بدون كاميرا (مهم) ======
-function testFromPattern() {
-  const canvas = document.getElementById("pattern");
-  const ctx = canvas.getContext("2d");
-
-  const size = 16;
-  const cell = canvas.width / size;
-
-  let binary = "";
-
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-
-      let px = Math.floor((x + 0.5) * cell);
-      let py = Math.floor((y + 0.5) * cell);
-
-      let data = ctx.getImageData(px, py, 1, 1).data;
-
-      let avg = (data[0] + data[1] + data[2]) / 3;
-
-      binary += avg < 128 ? "1" : "0";
-    }
-  }
-
-  let result = binaryToText(binary);
-  document.getElementById("output").innerText = result;
-}
-
 // ====== تشغيل الكاميرا ======
 const video = document.getElementById("video");
 
-function startCamera() {
-  navigator.mediaDevices.getUserMedia({
-    video: { facingMode: "environment" }
-  })
-  .then(stream => {
-    video.srcObject = stream;
-    scan();
-  });
-}
+navigator.mediaDevices.getUserMedia({
+  video: { facingMode: "environment" }
+})
+.then(stream => {
+  video.srcObject = stream;
+  scan();
+});
 
-// ====== قراءة بالكاميرا ======
+// ====== قراءة ======
 function scan() {
   const canvas = document.getElementById("scan");
   const ctx = canvas.getContext("2d");
@@ -149,14 +134,11 @@ function scan() {
   }
 
   let result = binaryToText(binary);
+
   document.getElementById("output").innerText = result;
 
   requestAnimationFrame(scan);
 }
-
-// ====== تشغيل أولي ======
-const binary = textToBinary(text);
-drawPattern(binary);
 
 </script>
 

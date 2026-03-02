@@ -1,95 +1,91 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>Scanner</title>
 <style>
-body { text-align:center; font-family:Arial; background:#111; color:#fff; }
-video { width:90%; max-width:400px; border-radius:12px; }
-#overlay {
-  position:absolute;
-  top:50%;
-  left:50%;
-  width:220px;
-  height:220px;
-  transform:translate(-50%,-50%);
-  border:3px solid #00ffcc;
-  border-radius:12px;
-  pointer-events:none;
+body{ text-align:center; background:#111; color:#fff; font-family:Arial;}
+video{ width:90%; max-width:400px; border-radius:12px;}
+#scan{ display:none;}
+#overlay{
+ position:absolute;
+ top:50%; left:50%;
+ width:250px; height:250px;
+ transform:translate(-50%,-50%);
+ border:3px solid #00ffcc;
+ border-radius:15px;
+ pointer-events:none;
 }
-#scan { display:none; }
 </style>
 </head>
 <body>
 
-<h2>وجه الكاميرا نحو الكارت</h2>
+<h2>Scan the Card</h2>
 
 <div style="position:relative; display:inline-block;">
-  <video id="video" autoplay playsinline></video>
-  <div id="overlay"></div>
+<video id="video" autoplay playsinline></video>
+<div id="overlay"></div>
 </div>
 
-<canvas id="scan" width="256" height="256"></canvas>
+<canvas id="scan" width="300" height="300"></canvas>
 
-<h2 id="output">...</h2>
+<h1 id="output">...</h1>
 
 <script>
 
-function binaryToText(binary) {
-  let text = "";
-  for (let i = 0; i < binary.length; i += 16) {
-    let chunk = binary.slice(i, i + 16);
-    let code = parseInt(chunk, 2);
-    if (!isNaN(code) && code > 0) {
-      text += String.fromCharCode(code);
+function binaryToText(binary){
+  let text="";
+  for(let i=0;i<binary.length;i+=8){
+    let byte=binary.slice(i,i+8);
+    let code=parseInt(byte,2);
+    if(!isNaN(code) && code>0){
+      text+=String.fromCharCode(code);
     }
   }
   return text;
 }
 
-const video = document.getElementById("video");
+const video=document.getElementById("video");
 
 navigator.mediaDevices.getUserMedia({
-  video: { facingMode: "environment" }
-})
-.then(stream => {
-  video.srcObject = stream;
-  scan();
+ video:{facingMode:"environment"}
+}).then(stream=>{
+ video.srcObject=stream;
+ scan();
 });
 
-function scan() {
-  const canvas = document.getElementById("scan");
-  const ctx = canvas.getContext("2d");
+function scan(){
+ const canvas=document.getElementById("scan");
+ const ctx=canvas.getContext("2d");
 
-  ctx.drawImage(video, 0, 0, 256, 256);
+ ctx.drawImage(video,0,0,300,300);
 
-  const size = 16;
-  const start = 40;
-  const area = 180;
-  const cell = area / size;
+ const size=20;
+ const start=60;
+ const area=180;
+ const cell=area/size;
 
-  let binary = "";
+ let binary="";
 
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
+ for(let y=2;y<size-2;y++){
+  for(let x=2;x<size-2;x++){
 
-      let px = Math.floor(start + (x + 0.5) * cell);
-      let py = Math.floor(start + (y + 0.5) * cell);
+   let px=Math.floor(start+(x+0.5)*cell);
+   let py=Math.floor(start+(y+0.5)*cell);
 
-      let data = ctx.getImageData(px, py, 1, 1).data;
-      let avg = (data[0] + data[1] + data[2]) / 3;
+   let data=ctx.getImageData(px,py,1,1).data;
+   let avg=(data[0]+data[1]+data[2])/3;
 
-      binary += avg < 140 ? "1" : "0";
-    }
+   binary += avg<140 ? "1":"0";
   }
+ }
 
-  let result = binaryToText(binary);
-  document.getElementById("output").innerText = result;
+ let result=binaryToText(binary);
+ document.getElementById("output").innerText=result;
 
-  requestAnimationFrame(scan);
+ requestAnimationFrame(scan);
 }
 
 </script>
-
 </body>
 </html>

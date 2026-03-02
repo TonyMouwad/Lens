@@ -2,10 +2,11 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>Pattern Demo</title>
+<title>Pattern كامل</title>
 <style>
 body { text-align:center; font-family: Arial; }
 canvas, video { width:300px; margin:10px; }
+button { padding:10px 20px; margin:10px; }
 </style>
 </head>
 <body>
@@ -13,11 +14,16 @@ canvas, video { width:300px; margin:10px; }
 <h2>الصورة المشفرة (محبة)</h2>
 <canvas id="pattern" width="256" height="256"></canvas>
 
-<h2>امسح الكارت بالكاميرا</h2>
+<h2>النتيجة:</h2>
+<h3 id="output"></h3>
+
+<button onclick="testFromPattern()">🧪 تجربة بدون كاميرا</button>
+<button onclick="startCamera()">📱 تشغيل الكاميرا</button>
+
+<br>
+
 <video id="video" autoplay playsinline></video>
 <canvas id="scan" width="256" height="256"></canvas>
-
-<h3 id="output"></h3>
 
 <script>
 // ====== النص ======
@@ -72,15 +78,48 @@ function binaryToText(binary) {
   return text;
 }
 
+// ====== اختبار بدون كاميرا (مهم) ======
+function testFromPattern() {
+  const canvas = document.getElementById("pattern");
+  const ctx = canvas.getContext("2d");
+
+  const size = 16;
+  const cell = canvas.width / size;
+
+  let binary = "";
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+
+      let px = Math.floor((x + 0.5) * cell);
+      let py = Math.floor((y + 0.5) * cell);
+
+      let data = ctx.getImageData(px, py, 1, 1).data;
+
+      let avg = (data[0] + data[1] + data[2]) / 3;
+
+      binary += avg < 128 ? "1" : "0";
+    }
+  }
+
+  let result = binaryToText(binary);
+  document.getElementById("output").innerText = result;
+}
+
 // ====== تشغيل الكاميرا ======
 const video = document.getElementById("video");
 
-navigator.mediaDevices.getUserMedia({
-  video: { facingMode: "environment" }
-})
-.then(stream => video.srcObject = stream);
+function startCamera() {
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "environment" }
+  })
+  .then(stream => {
+    video.srcObject = stream;
+    scan();
+  });
+}
 
-// ====== قراءة الصورة ======
+// ====== قراءة بالكاميرا ======
 function scan() {
   const canvas = document.getElementById("scan");
   const ctx = canvas.getContext("2d");
@@ -88,8 +127,8 @@ function scan() {
   ctx.drawImage(video, 0, 0, 256, 256);
 
   const size = 16;
-  const start = 40;   // قص من النص
-  const area = 180;   // مساحة الكود
+  const start = 40;
+  const area = 180;
 
   const cell = area / size;
 
@@ -105,21 +144,19 @@ function scan() {
 
       let avg = (data[0] + data[1] + data[2]) / 3;
 
-      binary += avg < 140 ? "1" : "0"; // زودنا tolerance
+      binary += avg < 140 ? "1" : "0";
     }
   }
 
   let result = binaryToText(binary);
-
   document.getElementById("output").innerText = result;
 
   requestAnimationFrame(scan);
 }
 
-// ====== تشغيل ======
+// ====== تشغيل أولي ======
 const binary = textToBinary(text);
 drawPattern(binary);
-scan();
 
 </script>
 

@@ -87,23 +87,25 @@ function scan() {
 
   ctx.drawImage(video, 0, 0, 256, 256);
 
-  const size = 16; // نفس اللي في الرسم
-  const cell = 256 / size;
+  const size = 16;
+  const start = 40;   // قص من النص
+  const area = 180;   // مساحة الكود
+
+  const cell = area / size;
 
   let binary = "";
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
 
-      // ناخد نقطة من نص المربع
-      let px = Math.floor((x + 0.5) * cell);
-      let py = Math.floor((y + 0.5) * cell);
+      let px = Math.floor(start + (x + 0.5) * cell);
+      let py = Math.floor(start + (y + 0.5) * cell);
 
       let data = ctx.getImageData(px, py, 1, 1).data;
 
       let avg = (data[0] + data[1] + data[2]) / 3;
 
-      binary += avg < 128 ? "1" : "0";
+      binary += avg < 140 ? "1" : "0"; // زودنا tolerance
     }
   }
 

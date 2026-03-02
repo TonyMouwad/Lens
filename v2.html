@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>Simple Pattern Scanner</title>
+<style>
+body { text-align: center; font-family: Arial; }
+video, canvas { width: 300px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h2>وجّه الكاميرا نحو الكارت</h2>
+
+<video id="video" autoplay playsinline></video>
+<canvas id="canvas" width="300" height="300"></canvas>
+
+<h3 id="output"></h3>
+
+<script>
+const video = document.getElementById("video");
+const output = document.getElementById("output");
+
+// فتح الكاميرا
+navigator.mediaDevices.getUserMedia({
+  video: { facingMode: "environment" }
+})
+.then(stream => video.srcObject = stream);
+
+// قراءة الصورة
+function scan() {
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+
+  ctx.drawImage(video, 0, 0, 300, 300);
+
+  const img = ctx.getImageData(0, 0, 300, 300).data;
+
+  let binary = "";
+
+  // تحويل الصورة لـ binary
+  for (let i = 0; i < img.length; i += 4) {
+    let avg = (img[i] + img[i+1] + img[i+2]) / 3;
+    binary += avg < 128 ? "1" : "0";
+  }
+
+  // تجربة فكها
+  let text = binaryToText(binary.slice(0, 2000));
+
+  output.innerText = text;
+
+  requestAnimationFrame(scan);
+}
+
+// تحويل binary → نص
+function binaryToText(binary) {
+  let text = "";
+
+  for (let i = 0; i < binary.length; i += 16) {
+    let chunk = binary.slice(i, i + 16);
+    let code = parseInt(chunk, 2);
+
+    if (!isNaN(code) && code > 0) {
+      text += String.fromCharCode(code);
+    }
+  }
+
+  return text;
+}
+
+scan();
+</script>
+
+</body>
+</html>

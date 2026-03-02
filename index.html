@@ -1,138 +1,141 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>كاشف الآية</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scanner Filter</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
 body{
     margin:0;
-    background:#111;
+    background:#0f0f0f;
+    font-family:Tajawal;
     color:white;
-    font-family:Arial;
-    text-align:center;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
 }
 
-video{
-    display:none;
+.viewer{
+    width:95%;
+    max-width:500px;
+    margin-top:20px;
+    position:relative;
+    border-radius:20px;
+    overflow:hidden;
+    border:2px solid #333;
 }
 
 canvas{
     width:100%;
-    max-width:500px;
-    border-radius:12px;
-    margin-top:10px;
 }
 
-.controls{
-    margin-top:15px;
+.scan-line{
+    position:absolute;
+    width:100%;
+    height:2px;
+    background:#00ff88;
+    animation:scan 3s linear infinite;
 }
 
-input{
-    width:80%;
+@keyframes scan{
+    from{top:0}
+    to{top:100%}
 }
 
 button{
-    margin-top:10px;
-    padding:10px 20px;
+    margin-top:20px;
+    padding:15px;
+    width:250px;
     border:none;
-    border-radius:8px;
-    background:#00c3ff;
-    color:black;
+    border-radius:15px;
+    background:#d4af37;
     font-weight:bold;
+    font-size:16px;
 }
 </style>
 </head>
+
 <body>
 
-<h2>كاشف الآية ✨</h2>
+<h2>نظام الفلتر الضوئي</h2>
 
-<button onclick="startCamera()">ابدأ الكشف</button>
-
-<br/>
-
-<video id="video" autoplay playsinline></video>
+<div class="viewer">
+<div class="scan-line"></div>
+<video id="video" autoplay playsinline style="display:none"></video>
 <canvas id="canvas"></canvas>
-
-<div class="controls">
-    <p>Contrast</p>
-    <input type="range" id="contrast" min="0" max="150" value="80">
-
-    <p>Threshold</p>
-    <input type="range" id="threshold" min="0" max="255" value="128">
-
-    <br/>
-    <button onclick="toggleEdge()">Edge Mode</button>
 </div>
 
+<button onclick="startCamera()">تشغيل الكاميرا</button>
+<button onclick="edgeMode=!edgeMode">تبديل Edge Mode</button>
+
 <script>
+
 let video = document.getElementById("video");
 let canvas = document.getElementById("canvas");
 let ctx = canvas.getContext("2d");
-
-let contrastSlider = document.getElementById("contrast");
-let thresholdSlider = document.getElementById("threshold");
-
 let edgeMode = false;
 
-function toggleEdge(){
-    edgeMode = !edgeMode;
-}
-
 async function startCamera(){
-    const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }
-    });
-    video.srcObject = stream;
 
-    video.onloadedmetadata = () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        processFrame();
-    }
-}
+    try{
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video:{
+                facingMode:"environment",
+                width:1280,
+                height:720
+            }
+        });
 
-function processFrame(){
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        video.srcObject = stream;
 
-    let imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-    let data = imageData.data;
-
-    let contrast = parseInt(contrastSlider.value);
-    let threshold = parseInt(thresholdSlider.value);
-
-    let factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-
-    for(let i=0;i<data.length;i+=4){
-
-        let r = data[i];
-        let g = data[i+1];
-        let b = data[i+2];
-
-        // Grayscale
-        let gray = 0.299*r + 0.587*g + 0.114*b;
-
-        // Contrast
-        gray = factor * (gray - 128) + 128;
-
-        if(edgeMode){
-            // Simple edge detection (Sobel-lite)
-            gray = Math.abs(gray - 128) * 2;
-        } else {
-            // Threshold
-            gray = gray > threshold ? 255 : 0;
+        video.onloadedmetadata = ()=>{
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            render();
         }
 
-        data[i] = gray;
-        data[i+1] = gray;
-        data[i+2] = gray;
+    }catch(e){
+        alert("اسمح بالوصول للكاميرا");
+    }
+}
+
+function render(){
+
+    if(video.paused || video.ended) return;
+
+    ctx.drawImage(video,0,0);
+
+    let img = ctx.getImageData(0,0,canvas.width,canvas.height);
+    let d = img.data;
+
+    let contrastValue = 80;
+
+    for(let i=0;i<d.length;i+=4){
+
+        let gray =
+        0.299*d[i] +
+        0.587*d[i+1] +
+        0.114*d[i+2];
+
+        gray = (gray-128)*(contrastValue/80)+128;
+
+        if(edgeMode){
+            gray = Math.abs(gray-128)*3.2;
+        }
+
+        gray = gray > 160 ? 255 : 0;
+
+        d[i]=d[i+1]=d[i+2]=gray;
     }
 
-    ctx.putImageData(imageData,0,0);
+    ctx.putImageData(img,0,0);
 
-    requestAnimationFrame(processFrame);
+    requestAnimationFrame(render);
 }
+
 </script>
 
 </body>
